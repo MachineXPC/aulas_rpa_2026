@@ -3,5 +3,6 @@
 .kiro/
 .pytest_cache/
 /**/__pycache__/
+*.log
 
 lab-professor/
