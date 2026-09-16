@@ -1,0 +1,4 @@
+2026-09-15 19:43:26,861 - ERROR - Arquivo não encontrado: dados.csv
+2026-09-15 19:43:26,861 - INFO - Tentativa de processamento do arquivo 'dados.csv' finalizada.
+2026-09-15 19:43:26,862 - ERROR - Arquivo não encontrado: arquivo_inexistente.csv
+2026-09-15 19:43:26,863 - INFO - Tentativa de processamento do arquivo 'arquivo_inexistente.csv' finalizada.
