@@ -84,3 +84,13 @@ test('unidades: leitura e formatação em pt-BR', () => {
   assert.equal(medida(1200, 'm'), '1,2 m');
   assert.equal(medida(22, 'cm'), '2,2 cm');
 });
+
+test('gerador: respeita a configuração e limita as tábuas à largura', async () => {
+  const { gerarPallet } = await import('../js/modelos.js');
+  const p = gerarPallet({ comprimento: 1400, largura: 800, tabuas: 12, espessura: 20, toco: 'pequeno', base: false });
+  const d = dimensoesTotais(p);
+  assert.deepEqual([d.x, d.z], [1400, 800]);
+  assert.equal(p.filter((x) => x.camada === 'superior').length, 8); // 800 mm ÷ 100 mm
+  assert.equal(p.filter((x) => x.camada === 'inferior').length, 0);
+  assert.equal(verificarProblemas(p).sobrepostas.size, 0);
+});

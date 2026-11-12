@@ -51,84 +51,85 @@ export function criarPeca(dados) {
   };
 }
 
-// ---------------------------------------------------------------- modelos
+// ---------------------------------------------------------------- modelos (por parâmetros)
 
-function tabua(camada, x, z, dx, dy, dz) {
-  return criarPeca({ tipo: 'tabua', camada, x, z, dx, dy, dz });
-}
-
-function toco(estilo, x, z, dx, dy, dz) {
-  return criarPeca({ tipo: 'toco', camada: 'tocos', estilo, x, z, dx, dy, dz });
-}
-
-function pbr() {
-  // 1200 × 1000 mm, 4 entradas, tocos 100 × 100 × 78.
-  const p = [];
-  for (const z of [0, 450, 900]) p.push(tabua('inferior', 0, z, 1200, 22, 100));
-  for (const x of [0, 550, 1100]) {
-    for (const z of [0, 450, 900]) p.push(toco('pbr', x, z, 100, 78, 100));
-  }
-  for (const x of [0, 550, 1100]) p.push(tabua('travessa', x, 0, 100, 22, 1000));
-  for (const z of [0, 150, 300, 450, 600, 750, 900]) p.push(tabua('superior', 0, z, 1200, 22, 100));
-  return p;
-}
-
-function europeu() {
-  // 1200 × 800 mm. Tábuas das bordas e do meio mais largas (145 mm).
-  const p = [];
-  p.push(tabua('inferior', 0, 0, 1200, 22, 100));
-  p.push(tabua('inferior', 0, 327.5, 1200, 22, 145));
-  p.push(tabua('inferior', 0, 700, 1200, 22, 100));
-  for (const x of [0, 527.5, 1055]) {
-    p.push(toco('livre', x, 0, 145, 78, 100));
-    p.push(toco('livre', x, 327.5, 145, 78, 145));
-    p.push(toco('livre', x, 700, 145, 78, 100));
-  }
-  for (const x of [0, 527.5, 1055]) p.push(tabua('travessa', x, 0, 145, 22, 800));
-  const face = [[0, 145], [186.25, 100], [327.5, 145], [513.75, 100], [655, 145]];
-  for (const [z, l] of face) p.push(tabua('superior', 0, z, 1200, 22, l));
-  return p;
-}
-
-function descartavel() {
-  // 1200 × 1000 mm, uso único: sem base, tocos pequenos e tábuas finas.
-  const p = [];
-  for (const x of [0, 560, 1120]) {
-    for (const z of [0, 460, 920]) p.push(toco('pequeno', x, z, 80, 70, 80));
-  }
-  for (const x of [0, 560, 1120]) p.push(tabua('travessa', x, 0, 80, 20, 1000));
-  for (const z of [0, 225, 450, 675, 900]) p.push(tabua('superior', 0, z, 1200, 18, 100));
-  return p;
-}
-
-function quadrado() {
-  // 1100 × 1100 mm, tocos estilo PBR.
-  const p = [];
-  for (const z of [0, 500, 1000]) p.push(tabua('inferior', 0, z, 1100, 22, 100));
-  for (const x of [0, 500, 1000]) {
-    for (const z of [0, 500, 1000]) p.push(toco('pbr', x, z, 100, 78, 100));
-  }
-  for (const x of [0, 500, 1000]) p.push(tabua('travessa', x, 0, 100, 22, 1100));
-  for (let i = 0; i < 8; i++) p.push(tabua('superior', 0, i * 142.857, 1100, 22, 100));
-  return p;
-}
+/**
+ * O pallet é gerado a partir de poucos números (a "configuração").
+ * Mexer num controle deslizante gera o pallet de novo, na hora.
+ */
+export const LIMITES = {
+  comprimento: { min: 600, max: 1600, passo: 10 },
+  largura: { min: 600, max: 1600, passo: 10 },
+  tabuas: { min: 3, max: 12, passo: 1 },
+  espessura: { min: 12, max: 40, passo: 1 },
+};
 
 export const MODELOS = [
-  { id: 'pbr', nome: 'PBR 1200 × 1000 (tocos PBR)', gerar: pbr },
-  { id: 'europeu', nome: 'Europeu 1200 × 800', gerar: europeu },
-  { id: 'descartavel', nome: 'Descartável 1200 × 1000 (tocos pequenos)', gerar: descartavel },
-  { id: 'quadrado', nome: 'Quadrado 1100 × 1100 (tocos PBR)', gerar: quadrado },
+  { id: 'pbr', nome: 'PBR', descricao: '1200 × 1000, tocos PBR',
+    config: { comprimento: 1200, largura: 1000, tabuas: 7, espessura: 22, toco: 'pbr', base: true } },
+  { id: 'europeu', nome: 'Europeu', descricao: '1200 × 800',
+    config: { comprimento: 1200, largura: 800, tabuas: 5, espessura: 22, toco: 'pbr', base: true } },
+  { id: 'descartavel', nome: 'Descartável', descricao: '1200 × 1000, tocos pequenos, sem base',
+    config: { comprimento: 1200, largura: 1000, tabuas: 5, espessura: 18, toco: 'pequeno', base: false } },
+  { id: 'quadrado', nome: 'Quadrado', descricao: '1100 × 1100',
+    config: { comprimento: 1100, largura: 1100, tabuas: 8, espessura: 22, toco: 'pbr', base: true } },
 ];
 
-export function gerarModelo(id) {
-  const modelo = MODELOS.find((m) => m.id === id) ?? MODELOS[0];
-  const pecas = modelo.gerar().map((p) => ({
-    ...p,
-    x: arred(p.x), z: arred(p.z), dx: arred(p.dx), dz: arred(p.dz),
-  }));
+const LARGURA_TABUA = 100;
+
+/** Garante que a configuração está dentro dos limites. */
+export function limparConfig(c = {}) {
+  const base = MODELOS[0].config;
+  const lim = (k) => {
+    const v = Number.isFinite(c[k]) ? c[k] : base[k];
+    return Math.min(LIMITES[k].max, Math.max(LIMITES[k].min, Math.round(v / LIMITES[k].passo) * LIMITES[k].passo));
+  };
+  const largura = lim('largura');
+  return {
+    comprimento: lim('comprimento'),
+    largura,
+    // As tábuas da face não podem passar da largura do pallet.
+    tabuas: Math.min(lim('tabuas'), Math.floor(largura / LARGURA_TABUA)),
+    espessura: lim('espessura'),
+    toco: c.toco === 'pequeno' ? 'pequeno' : 'pbr',
+    base: c.base !== false,
+  };
+}
+
+/**
+ * Gera as peças: 9 tocos em grade 3 × 3, travessas sobre cada coluna de tocos,
+ * tábuas da face espaçadas por igual e (opcional) 3 tábuas de base.
+ * Os ids são fixos (ex.: "face-3"), assim a cena 3D anima as peças de um formato para outro.
+ */
+export function gerarPallet(config) {
+  const c = limparConfig(config);
+  const t = ESTILOS_TOCO[c.toco];
+  const X = c.comprimento;
+  const Z = c.largura;
+  const e = c.espessura;
+  const colunas = [0, (X - t.dx) / 2, X - t.dx];
+  const linhas = [0, (Z - t.dz) / 2, Z - t.dz];
+  const p = [];
+  if (c.base) {
+    linhas.forEach((z, i) => p.push(criarPeca({ id: `base-${i}`, tipo: 'tabua', camada: 'inferior', x: 0, z, dx: X, dy: e, dz: t.dz })));
+  }
+  colunas.forEach((x, i) => linhas.forEach((z, j) => p.push(criarPeca({
+    id: `toco-${i}-${j}`, tipo: 'toco', camada: 'tocos', estilo: c.toco, x, z, dx: t.dx, dy: t.dy, dz: t.dz,
+  }))));
+  colunas.forEach((x, i) => p.push(criarPeca({ id: `trav-${i}`, tipo: 'tabua', camada: 'travessa', x, z: 0, dx: t.dx, dy: e, dz: Z })));
+  const passo = c.tabuas > 1 ? (Z - LARGURA_TABUA) / (c.tabuas - 1) : 0;
+  for (let i = 0; i < c.tabuas; i++) {
+    p.push(criarPeca({ id: `face-${i}`, tipo: 'tabua', camada: 'superior', x: 0, z: i * passo, dx: X, dy: e, dz: LARGURA_TABUA }));
+  }
+  const pecas = p.map((q) => ({ ...q, x: arred(q.x), z: arred(q.z) }));
   empilhar(pecas);
   renumerar(pecas);
   return pecas;
+}
+
+export function gerarModelo(id) {
+  const modelo = MODELOS.find((m) => m.id === id) ?? MODELOS[0];
+  return gerarPallet(modelo.config);
 }
 
 function arred(v) {

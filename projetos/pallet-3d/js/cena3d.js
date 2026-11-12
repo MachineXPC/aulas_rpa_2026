@@ -76,9 +76,12 @@ const CORES = {
 // ---------------------------------------------------------------- classe principal
 
 export class Cena3D {
-  constructor(container, { aoSelecionar } = {}) {
+  constructor(container, { aoSelecionar, aoArrastar, aoSoltar } = {}) {
     this.container = container;
     this.aoSelecionar = aoSelecionar ?? (() => {});
+    this.aoArrastar = aoArrastar ?? (() => {});
+    this.aoSoltar = aoSoltar ?? (() => {});
+    this.arraste = null; // { id, plano, inicio, x0, z0, moveu }
     this.pecas = [];
     this.objetos = new Map(); // id -> { mesh, arestas, peca }
     this.selecionado = null;
@@ -118,6 +121,9 @@ export class Cena3D {
     this.controles.minDistance = 0.25;
     this.controles.maxDistance = 12;
     this.controles.maxPolarAngle = Math.PI * 0.495;
+    // Gira sozinho devagar até a pessoa mexer na cena.
+    this.controles.autoRotate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.controles.autoRotateSpeed = 0.7;
 
     this.redimensionar();
     new ResizeObserver(() => this.redimensionar()).observe(container);
@@ -217,19 +223,74 @@ export class Cena3D {
   #eventos() {
     const el = this.renderer.domElement;
     let inicio = null;
-    el.addEventListener('pointerdown', (e) => { inicio = { x: e.clientX, y: e.clientY }; });
-    el.addEventListener('pointerup', (e) => {
+    const pararGiro = () => { this.controles.autoRotate = false; };
+    el.addEventListener('wheel', pararGiro, { passive: true });
+
+    el.addEventListener('pointerdown', (e) => {
+      pararGiro();
+      inicio = { x: e.clientX, y: e.clientY };
+      if (e.button !== 0) return;
+      // Arrastar só funciona na peça que já está selecionada.
+      const id = this.#pecaSobPonteiro(e);
+      if (!id || id !== this.selecionado) return;
+      const obj = this.objetos.get(id);
+      const yTopo = obj.mesh.position.y + (obj.peca.dy * MM) / 2;
+      const plano = new THREE.Plane(new THREE.Vector3(0, 1, 0), -yTopo);
+      const ponto = this.#pontoNoPlano(e, plano);
+      if (!ponto) return;
+      this.arraste = { id, plano, inicio: ponto, x0: obj.peca.x, z0: obj.peca.z, moveu: false };
+      this.controles.enabled = false;
+      el.setPointerCapture(e.pointerId);
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (this.arraste) {
+        const ponto = this.#pontoNoPlano(e, this.arraste.plano);
+        if (!ponto) return;
+        const passo = 5; // mm
+        const nx = Math.round((this.arraste.x0 + (ponto.x - this.arraste.inicio.x) / MM) / passo) * passo;
+        const nz = Math.round((this.arraste.z0 + (ponto.z - this.arraste.inicio.z) / MM) / passo) * passo;
+        const p = this.objetos.get(this.arraste.id)?.peca;
+        if (p && (nx !== p.x || nz !== p.z)) {
+          this.arraste.moveu = true;
+          this.aoArrastar(this.arraste.id, nx, nz);
+        }
+        el.style.cursor = 'grabbing';
+        return;
+      }
+      if (e.buttons) return;
+      const id = this.#pecaSobPonteiro(e);
+      el.style.cursor = id ? (id === this.selecionado ? 'move' : 'pointer') : 'grab';
+    });
+
+    const soltar = (e) => {
+      if (this.arraste) {
+        const { id, moveu } = this.arraste;
+        this.arraste = null;
+        this.controles.enabled = true;
+        if (el.hasPointerCapture?.(e.pointerId)) el.releasePointerCapture(e.pointerId);
+        this.#centralizar();
+        if (moveu) {
+          inicio = null;
+          this.aoSoltar(id);
+          return;
+        }
+      }
       if (!inicio || e.button !== 0) return;
       const moveu = Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y);
       inicio = null;
       if (moveu > 5) return; // foi um arraste para girar, não um clique
-      const id = this.#pecaSobPonteiro(e);
-      this.aoSelecionar(id);
-    });
-    el.addEventListener('pointermove', (e) => {
-      if (e.buttons) return;
-      el.style.cursor = this.#pecaSobPonteiro(e) ? 'pointer' : 'grab';
-    });
+      this.aoSelecionar(this.#pecaSobPonteiro(e));
+    };
+    el.addEventListener('pointerup', soltar);
+    el.addEventListener('pointercancel', soltar);
+  }
+
+  #pontoNoPlano(e, plano) {
+    const r = this.renderer.domElement.getBoundingClientRect();
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), this.camera);
+    return ray.ray.intersectPlane(plano, new THREE.Vector3());
   }
 
   #pecaSobPonteiro(e) {
@@ -271,6 +332,8 @@ export class Cena3D {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.id = p.id;
+        mesh.userData.novo = true;
+        mesh.scale.setScalar(this.reduzirMovimento ? 1 : 0.01);
         const arestas = new THREE.LineSegments(new THREE.BufferGeometry(), this.matAresta);
         mesh.add(arestas);
         this.raiz.add(mesh);
@@ -300,6 +363,10 @@ export class Cena3D {
 
   #centralizar() {
     if (!this.pecas.length) return;
+    if (this.arraste) {
+      this.#posicionar();
+      return;
+    }
     const xs = this.pecas.flatMap((p) => [p.x, p.x + p.dx]);
     const zs = this.pecas.flatMap((p) => [p.z, p.z + p.dz]);
     const ys = this.pecas.map((p) => p.y + p.dy);
@@ -316,11 +383,17 @@ export class Cena3D {
     const t = this.fatorExplosao;
     for (const { mesh, peca: p } of this.objetos.values()) {
       const ordem = camadaPorId[p.camada]?.ordem ?? 0;
-      mesh.position.set(
+      const alvo = mesh.userData.alvo ?? (mesh.userData.alvo = new THREE.Vector3());
+      alvo.set(
         (p.x + p.dx / 2) * MM - this.centro.x,
         (p.y + p.dy / 2) * MM + ordem * SEPARACAO_EXPLODIDA * t,
         (p.z + p.dz / 2) * MM - this.centro.z,
       );
+      // Peça nova, peça sendo arrastada ou movimento reduzido: vai direto para o lugar.
+      if (mesh.userData.novo || this.reduzirMovimento || this.arraste?.id === p.id) {
+        mesh.position.copy(alvo);
+        mesh.userData.novo = false;
+      }
     }
   }
 
@@ -464,6 +537,11 @@ export class Cena3D {
       if (this.alvoSuave) {
         this.controles.target.lerp(this.alvoSuave, 0.12);
         if (this.controles.target.distanceTo(this.alvoSuave) < 0.001) this.alvoSuave = null;
+      }
+      for (const { mesh } of this.objetos.values()) {
+        const alvo = mesh.userData.alvo;
+        if (alvo && mesh.position.distanceToSquared(alvo) > 1e-8) mesh.position.lerp(alvo, 0.22);
+        if (mesh.scale.x < 0.999) mesh.scale.setScalar(Math.min(1, mesh.scale.x + (1 - mesh.scale.x) * 0.2 + 0.01));
       }
       this.controles.update();
       this.#atualizarCotas();

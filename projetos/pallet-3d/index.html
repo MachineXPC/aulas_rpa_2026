@@ -29,140 +29,144 @@
         <rect x="30" y="10" width="7" height="8" rx="1"/>
         <rect x="1" y="21" width="38" height="5" rx="1"/>
       </svg>
-      <div class="marca-texto">
-        <span class="sobrelinha">Montador de pallets 3D</span>
-        <label class="sr" for="nome-montagem">Nome da montagem</label>
-        <input id="nome-montagem" class="nome-montagem" type="text" maxlength="60" autocomplete="off" spellcheck="false">
-      </div>
+      <label class="sr" for="nome-montagem">Nome da montagem</label>
+      <input id="nome-montagem" class="nome-montagem" type="text" maxlength="60" autocomplete="off" spellcheck="false">
     </div>
-
     <div class="topo-controles">
-      <label class="campo-inline" for="sel-modelo">
-        <span>Modelo</span>
-        <select id="sel-modelo"></select>
-      </label>
-
       <div class="segmentado" id="unidades" role="radiogroup" aria-label="Unidade de medida">
         <button type="button" role="radio" data-unidade="mm">mm</button>
         <button type="button" role="radio" data-unidade="cm">cm</button>
         <button type="button" role="radio" data-unidade="m">m</button>
       </div>
-
-      <div class="grupo-botoes">
-        <button type="button" id="btn-desfazer" class="icone" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5 3 9l4 4M3.5 9H12a5 5 0 0 1 0 10h-2"/></svg>
-        </button>
-        <button type="button" id="btn-refazer" class="icone" title="Refazer (Ctrl+Y)" aria-label="Refazer">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m13 5 4 4-4 4M16.5 9H8a5 5 0 0 0 0 10h2"/></svg>
-        </button>
-        <button type="button" id="btn-restaurar">Restaurar modelo</button>
-        <button type="button" id="btn-abrir">Abrir</button>
-        <button type="button" id="btn-salvar">Salvar</button>
-        <button type="button" id="btn-exportar" class="primario">Exportar</button>
-      </div>
+      <button type="button" id="btn-desfazer" class="icone" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5 3 9l4 4M3.5 9H12a5 5 0 0 1 0 10h-2"/></svg>
+      </button>
+      <button type="button" id="btn-arquivo" class="primario">Salvar e exportar</button>
     </div>
   </header>
 
   <main class="layout">
     <section class="coluna-principal">
-      <div class="visor" id="visor">
-        <div class="visor-barra">
-          <button type="button" id="btn-explodida" class="alternar" aria-pressed="false">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M3 9.5h14M3 15h14" /><path d="M10 1.5v1.5M10 17v1.5" /></svg>
-            <span>Vista explodida</span>
-          </button>
-          <div class="segmentado pequeno" id="vistas" role="group" aria-label="Posição da câmera">
-            <button type="button" data-vista="iso">3D</button>
-            <button type="button" data-vista="topo">Topo</button>
-            <button type="button" data-vista="frente">Frente</button>
-            <button type="button" data-vista="lado">Lado</button>
+      <div class="palco">
+        <div class="visor" id="visor">
+          <div class="visor-barra">
+            <button type="button" id="btn-explodida" class="alternar" aria-pressed="false">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M3 9.5h14M3 15h14"/></svg>
+              <span>Vista explodida</span>
+            </button>
+            <button type="button" id="btn-centralizar" class="alternar" title="Voltar a câmera para o pallet">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M10 1v4M10 15v4M1 10h4M15 10h4"/></svg>
+              <span>Centralizar</span>
+            </button>
           </div>
-          <label class="check" for="chk-transparencia">
-            <input type="checkbox" id="chk-transparencia" checked>
-            <span>Transparência ao selecionar</span>
-          </label>
+          <p class="visor-dica" id="visor-dica">Arraste para girar · role para aproximar · clique numa peça para ver as medidas · arraste a peça selecionada para mover</p>
+          <p class="visor-erro" id="visor-erro" hidden>Este navegador não conseguiu abrir o 3D (WebGL desativado). Os cálculos continuam funcionando.</p>
         </div>
-        <p class="visor-dica" id="visor-dica">Arraste para girar · roda do mouse ou pinça para aproximar · botão direito ou dois dedos para mover · clique numa peça para ver as medidas</p>
-        <div class="visor-resumo" id="resumo-visor" aria-live="polite"></div>
-        <p class="visor-erro" id="visor-erro" hidden>Não foi possível iniciar o 3D neste navegador (WebGL desativado). Os cálculos e a lista continuam funcionando.</p>
+        <section class="peca-card" id="editor" aria-label="Peça selecionada" hidden></section>
       </div>
 
-      <section class="calculos" aria-label="Cálculos">
-        <div class="abas" role="tablist" aria-label="Cálculos">
-          <button type="button" role="tab" id="tab-volume" aria-controls="aba-volume" aria-selected="true">Volume</button>
-          <button type="button" role="tab" id="tab-custos" aria-controls="aba-custos" aria-selected="false">Custos e preço</button>
-          <button type="button" role="tab" id="tab-capacidade" aria-controls="aba-capacidade" aria-selected="false">Capacidade de carga</button>
+      <section class="resumo" aria-label="Resultado">
+        <div class="kpi">
+          <span class="kpi-rotulo">Madeira</span>
+          <strong id="k-volume">—</strong>
+          <small id="k-peso"></small>
         </div>
-        <div class="aba-painel" role="tabpanel" id="aba-volume" aria-labelledby="tab-volume"></div>
-        <div class="aba-painel" role="tabpanel" id="aba-custos" aria-labelledby="tab-custos" hidden></div>
-        <div class="aba-painel" role="tabpanel" id="aba-capacidade" aria-labelledby="tab-capacidade" hidden></div>
+        <div class="kpi">
+          <span class="kpi-rotulo">Custo por pallet</span>
+          <strong id="k-custo">—</strong>
+          <small>madeira, pregos, frete e outros</small>
+        </div>
+        <div class="kpi destaque">
+          <span class="kpi-rotulo">Preço sugerido</span>
+          <strong id="k-preco">—</strong>
+          <label class="kpi-margem" for="rng-margem">
+            <span>Margem <b id="k-margem">25%</b></span>
+            <input type="range" id="rng-margem" min="0" max="60" step="1">
+          </label>
+        </div>
+        <div class="kpi alerta">
+          <span class="kpi-rotulo">Carga estimada</span>
+          <strong id="k-carga">—</strong>
+          <small>estimativa, não é garantia</small>
+        </div>
       </section>
+
+      <div class="detalhes">
+        <details id="det-custos">
+          <summary>Preços usados no cálculo <span>altere os valores do seu fornecedor</span></summary>
+          <div class="det-corpo" id="aba-custos"></div>
+        </details>
+        <details id="det-volume">
+          <summary>Como o volume foi calculado <span>passo a passo e lista de corte</span></summary>
+          <div class="det-corpo" id="aba-volume"></div>
+        </details>
+        <details id="det-carga">
+          <summary>Como a carga foi estimada <span>leia antes de usar o número</span></summary>
+          <div class="det-corpo" id="aba-capacidade"></div>
+        </details>
+      </div>
     </section>
 
     <aside class="lateral">
-      <section class="cartao editor" id="editor" aria-label="Peça selecionada"></section>
+      <section class="cartao" aria-labelledby="titulo-montar">
+        <header class="cartao-cab">
+          <h2 id="titulo-montar">Montar</h2>
+          <button type="button" id="btn-restaurar" class="link">Restaurar modelo</button>
+        </header>
+        <div class="chips" id="modelos" role="radiogroup" aria-label="Modelo de pallet"></div>
+        <div class="controles" id="controles"></div>
+      </section>
 
       <section class="cartao componentes" aria-labelledby="titulo-componentes">
         <header class="cartao-cab">
-          <h2 id="titulo-componentes">Componentes</h2>
-          <span class="contador" id="contador-pecas"></span>
+          <h2 id="titulo-componentes">Peças <span class="contador" id="contador-pecas"></span></h2>
+          <div class="adicionar">
+            <button type="button" id="btn-add-tabua">+ Tábua</button>
+            <button type="button" id="btn-add-toco">+ Toco</button>
+          </div>
         </header>
-        <div class="adicionar">
-          <button type="button" id="btn-add-tabua">+ Tábua</button>
-          <button type="button" id="btn-add-toco">+ Toco</button>
-          <label class="sr" for="sel-estilo-novo">Modelo do novo toco</label>
-          <select id="sel-estilo-novo">
-            <option value="pbr">estilo PBR</option>
-            <option value="pequeno">pequeno</option>
-          </select>
-        </div>
-        <label class="check" for="chk-empilhar">
-          <input type="checkbox" id="chk-empilhar" checked>
-          <span>Empilhar camadas automaticamente (altura Y calculada)</span>
-        </label>
         <div class="lista" id="lista"></div>
       </section>
     </aside>
   </main>
 </div>
 
-<dialog id="dlg-salvar" class="dialogo">
+<dialog id="dlg-arquivo" class="dialogo">
   <form method="dialog" id="form-salvar">
-    <h2>Salvar montagem</h2>
-    <label class="campo" for="salvar-nome"><span>Nome</span><input id="salvar-nome" type="text" maxlength="60" required></label>
-    <p class="nota">Fica guardada neste navegador. Para levar a outro computador, baixe o arquivo .json.</p>
-    <div class="dialogo-acoes">
-      <button type="button" data-fechar>Cancelar</button>
-      <button type="button" id="btn-salvar-arquivo">Baixar .json</button>
-      <button type="submit" class="primario" value="salvar">Salvar no navegador</button>
+    <div class="dialogo-cab">
+      <h2>Salvar e exportar</h2>
+      <button type="button" data-fechar class="icone" aria-label="Fechar">✕</button>
     </div>
-  </form>
-</dialog>
 
-<dialog id="dlg-abrir" class="dialogo">
-  <form method="dialog">
-    <h2>Abrir montagem</h2>
-    <div id="lista-salvos" class="lista-salvos"></div>
-    <label class="botao-arquivo" for="arquivo-json">
-      <input id="arquivo-json" type="file" accept=".json,application/json">
-      <span>Carregar arquivo .json…</span>
-    </label>
-    <div class="dialogo-acoes"><button type="button" data-fechar>Fechar</button></div>
-  </form>
-</dialog>
+    <section class="dlg-sec">
+      <h3>Salvar</h3>
+      <div class="linha-salvar">
+        <label class="sr" for="salvar-nome">Nome</label>
+        <input id="salvar-nome" type="text" maxlength="60">
+        <button type="submit" class="primario">Salvar</button>
+        <button type="button" id="btn-salvar-arquivo">Baixar .json</button>
+      </div>
+    </section>
 
-<dialog id="dlg-exportar" class="dialogo">
-  <form method="dialog">
-    <h2>Exportar</h2>
-    <div class="opcoes-exportar">
-      <button type="button" data-exportar="png"><strong>Imagem 3D</strong><span>PNG do que está na tela</span></button>
-      <button type="button" data-exportar="svg"><strong>Desenho técnico</strong><span>SVG com vistas superior, frontal e lateral</span></button>
-      <button type="button" data-exportar="csv"><strong>Resumo de custos</strong><span>CSV que abre no Excel</span></button>
-      <button type="button" data-exportar="html"><strong>Relatório completo</strong><span>HTML com desenho, lista de corte e custos</span></button>
-      <button type="button" data-exportar="imprimir"><strong>Imprimir ou salvar PDF</strong><span>Abre a impressão do relatório</span></button>
-      <button type="button" data-exportar="json"><strong>Montagem</strong><span>Arquivo .json para abrir depois</span></button>
-    </div>
-    <div class="dialogo-acoes"><button type="button" data-fechar>Fechar</button></div>
+    <section class="dlg-sec">
+      <h3>Abrir</h3>
+      <div id="lista-salvos" class="lista-salvos"></div>
+      <label class="botao-arquivo" for="arquivo-json">
+        <input id="arquivo-json" type="file" accept=".json,application/json">
+        <span>Carregar arquivo .json…</span>
+      </label>
+    </section>
+
+    <section class="dlg-sec">
+      <h3>Exportar</h3>
+      <div class="opcoes-exportar">
+        <button type="button" data-exportar="png"><strong>Imagem 3D</strong><span>PNG</span></button>
+        <button type="button" data-exportar="svg"><strong>Desenho técnico</strong><span>SVG com 3 vistas</span></button>
+        <button type="button" data-exportar="csv"><strong>Custos</strong><span>CSV para Excel</span></button>
+        <button type="button" data-exportar="imprimir"><strong>Relatório</strong><span>Imprimir ou PDF</span></button>
+        <button type="button" data-exportar="html"><strong>Relatório</strong><span>Arquivo HTML</span></button>
+      </div>
+    </section>
   </form>
 </dialog>
 

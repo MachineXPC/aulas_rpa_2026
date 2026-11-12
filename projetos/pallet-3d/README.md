@@ -21,29 +21,28 @@ python -m http.server 8000
 
 Depois abra <http://localhost:8000> no navegador. Para parar o servidor: `Ctrl + C` no terminal.
 
-## O que dá para fazer
+## Como usar
 
-| Recurso | Onde fica |
-|---|---|
-| Escolher o modelo (PBR, Europeu, Descartável, Quadrado) | Topo → **Modelo** |
-| Unidade de medida (mm, cm, m) | Topo → botões **mm / cm / m** |
-| Restaurar o pallet original | Topo → **Restaurar modelo** (Ctrl+Z desfaz) |
-| Girar, aproximar, mover a câmera | Arrastar, roda do mouse / pinça, botão direito / dois dedos |
-| Vistas prontas | **3D, Topo, Frente, Lado** |
-| Vista explodida (separa as camadas) | **Vista explodida** → clique de novo para voltar |
-| Selecionar peça (mostra medidas sobre a madeira) | Clique na peça no 3D ou na lista. Clique fora limpa |
-| Adicionar tábua ou toco (pequeno ou estilo PBR) | **+ Tábua**, **+ Toco** |
-| Duplicar, remover, girar 90°, mover, editar medidas | Painel da peça selecionada |
-| Lista de componentes agrupada por tipo e camada | Painel **Componentes** |
-| Volume em m³ com passo a passo | Aba **Volume** |
-| Custos (madeira, pregos, frete, outros) e preço sugerido | Aba **Custos e preço** |
-| Estimativa de capacidade de carga | Aba **Capacidade de carga** |
-| Salvar / abrir montagens | **Salvar** e **Abrir** (no navegador ou arquivo `.json`) |
-| Exportar imagem, desenho técnico, CSV, relatório, PDF | **Exportar** |
+1. **Escolha o modelo** (PBR, Europeu, Descartável, Quadrado) no painel **Montar**.
+2. **Mexa nos controles deslizantes**: comprimento, largura, nº de tábuas na face e espessura.
+   O pallet muda na hora. Escolha tocos **pequenos** ou **estilo PBR** e ligue/desligue a base.
+3. **Clique numa peça** no 3D ou na lista: ela fica destacada e mostra as medidas sobre a madeira.
+   No cartão da peça dá para mudar as medidas, girar, duplicar ou remover.
+   **Arraste a peça selecionada** para mudar a posição. Clique fora para limpar.
+4. Veja os **4 números** embaixo do 3D: madeira (m³ e kg), custo, preço sugerido e carga estimada.
+   A **margem** se ajusta direto no controle do preço.
+5. Abra as seções de baixo para ver **o passo a passo** do volume, **editar os preços**
+   (madeira, pregos, frete, outros) e entender **a estimativa de carga**.
+6. **Salvar e exportar**: salva no navegador ou em `.json`, e exporta imagem PNG,
+   desenho técnico SVG, custos em CSV e relatório (HTML ou impressão/PDF).
 
-Atalhos com uma peça selecionada: `Delete` remove, `Ctrl+D` duplica, setas movem em X/Z,
-`Page Up/Down` movem em Y (com o empilhamento automático desligado), `Esc` limpa a seleção,
-`Ctrl+Z` / `Ctrl+Y` desfazem e refazem.
+Outros botões: **Vista explodida** (separa as camadas; clique de novo para montar),
+**Centralizar** (volta a câmera), **Restaurar modelo**, **mm / cm / m** e **desfazer** (`Ctrl+Z`).
+
+Atalhos com uma peça selecionada: `Delete` remove, `Ctrl+D` duplica, setas movem 10 mm, `Esc` limpa a seleção.
+
+> Os controles deslizantes geram o pallet de novo. Se você tinha mexido em peças avulsas,
+> essas mudanças são refeitas pelo controle (use `Ctrl+Z` para voltar).
 
 ## Como os cálculos funcionam
 
@@ -55,9 +54,9 @@ Todas as medidas são guardadas em **milímetros**. A unidade escolhida muda só
 - **Pregos**: o sistema conta as *ligações* (onde uma peça encosta na de baixo) e multiplica
   pelos pregos por ligação. Dá para digitar o total na mão.
 - **Frete**: valor da carga ÷ pallets por carga.
-- **Preço sugerido**: com *margem sobre o preço* → `custo ÷ (1 − margem)`; com *markup* →
-  `custo × (1 + markup)`. Exemplo: custo R$ 75 com margem de 25% → R$ 100 (lucro de R$ 25 = 25% do preço).
-  Com markup de 25%, o mesmo custo vira R$ 93,75.
+- **Preço sugerido**: margem sobre o preço → `custo ÷ (1 − margem)`.
+  Exemplo: custo R$ 75 com margem de 25% → R$ 100 (lucro de R$ 25 = 25% do preço).
+  Repare que não é o mesmo que somar 25% no custo (isso daria R$ 93,75).
 
 ### Capacidade de carga — leia antes de usar
 
@@ -84,8 +83,8 @@ pallet-3d/
 ├── css/estilo.css      # visual (tema claro e escuro)
 ├── js/
 │   ├── main.js         # estado, tela e eventos
-│   ├── cena3d.js       # cena 3D (Three.js): peças, seleção, cotas, vista explodida
-│   ├── modelos.js      # modelos prontos, camadas, tipos de toco, empilhamento
+│   ├── cena3d.js       # cena 3D (Three.js): peças, seleção, arrastar, cotas, vista explodida
+│   ├── modelos.js      # gerador do pallet por parâmetros, modelos, tipos de toco
 │   ├── calculos.js     # volume, pregos, custos, preço e capacidade (funções puras)
 │   ├── exportar.js     # desenho SVG, CSV, relatório HTML
 │   └── unidades.js     # mm / cm / m e números no padrão brasileiro
@@ -103,7 +102,6 @@ node --test tests/*.test.mjs
 
 ## Ideias para próximas versões
 
-- Arrastar as peças com o mouse direto no 3D.
 - Pallet de longarina (sem tocos) como modelo.
 - Cálculo de pregos por área de contato e tipo de prego.
 - Publicar no GitHub Pages para abrir sem servidor local.
